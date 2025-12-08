@@ -1,39 +1,31 @@
-
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: devops
 ---
 apiVersion: v1
-kind: Secret
+kind: PersistentVolume
 metadata:
-  name: mysql-secret
-  namespace: devops
-type: Opaque
-data:
-  # mot de passe root encodé en base64, ex: echo -n "root123" | base64
-  root-password: cm9vdDEyMw==
+  name: mysql-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/data/mysql"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc
-  namespace: devops
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 1Gi
-  storageClassName: standard
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
-  namespace: devops
-  labels:
-    app: mysql
 spec:
   replicas: 1
   selector:
@@ -47,19 +39,16 @@ spec:
       containers:
         - name: mysql
           image: mysql:8.0
-          ports:
-            - containerPort: 3306
           env:
             - name: MYSQL_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mysql-secret
-                  key: root-password
+              value: root123
             - name: MYSQL_DATABASE
-              value: students
+              value: springdb
+          ports:
+            - containerPort: 3306
           volumeMounts:
-            - name: mysql-storage
-              mountPath: /var/lib/mysql
+            - mountPath: /var/lib/mysql
+              name: mysql-storage
       volumes:
         - name: mysql-storage
           persistentVolumeClaim:
@@ -69,14 +58,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mysql-service
-  namespace: devops
 spec:
   selector:
     app: mysql
   ports:
-    - protocol: TCP
-      port: 3306
+    - port: 3306
       targetPort: 3306
   type: ClusterIP
-
-
