@@ -1,38 +1,26 @@
-# 1. ConfigMap - NEWLY ADDED
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: spring-config
-  namespace: devops
 data:
-  # Connection URL to the mysql-service in the same namespace
-  SPRING_DATASOURCE_URL: jdbc:mysql://mysql-service:3306/students?allowPublicKeyRetrieval=true&useSSL=false
-
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql-service:3306/springdb
 ---
-
-# 2. Secret for Application DB Credentials - NEWLY ADDED
 apiVersion: v1
 kind: Secret
 metadata:
   name: spring-secret
-  namespace: devops
 type: Opaque
 data:
-  # Base64 encoded 'root' (matching MySQL default user)
-  SPRING_DATASOURCE_USERNAME: cm9vdA==
-  # Base64 encoded '12345' (matching MySQL root-password)
-  SPRING_DATASOURCE_PASSWORD: MTIzNDU=
-
+  SPRING_DATASOURCE_USERNAME: cm9vdA==  # base64 for "root"
+  SPRING_DATASOURCE_PASSWORD: cm9vdDEyMw==  # base64 for "root123"
 ---
-
-# 3. Spring Application Deployment (Namespace and references corrected)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: student-app
-  namespace: devops # <-- CORRECTED: Added namespace
+  name: spring-app
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: spring-app
@@ -42,40 +30,25 @@ spec:
         app: spring-app
     spec:
       containers:
-      - name: spring-app
-        image: faresjomaa/faresjomaa:latest
-        ports:
-        - containerPort: 8089
-        env:
-        - name: SPRING_DATASOURCE_URL
-          valueFrom:
-            configMapKeyRef:
-              name: spring-config
-              key: SPRING_DATASOURCE_URL
-        - name: SPRING_DATASOURCE_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: spring-secret
-              key: SPRING_DATASOURCE_USERNAME
-        - name: SPRING_DATASOURCE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: spring-secret
-              key: SPRING_DATASOURCE_PASSWORD
-
+        - name: spring-app
+          image: faresjomaa/faresjomaa:latest  
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: spring-config
+            - secretRef:
+                name: spring-secret
 ---
-
-# 4. Spring Application Service (Namespace corrected)
 apiVersion: v1
 kind: Service
 metadata:
   name: spring-service
-  namespace: devops # <-- CORRECTED: Added namespace
 spec:
   selector:
     app: spring-app
   ports:
-  - port: 8089
-    targetPort: 8089
-    nodePort: 32080
-  type: LoadBalancer
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30080
+  type: NodePort
