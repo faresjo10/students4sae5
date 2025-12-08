@@ -1,9 +1,41 @@
+                                                                                                                                                                     spring-deployment.yaml
+# FILE: spring-deployment.yaml
+
+# 1. ConfigMap - NEWLY ADDED
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spring-config
+  namespace: devops
+data:
+  # Connection URL to the mysql-service in the same namespace
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql-service:3306/students?allowPublicKeyRetrieval=true&useSSL=false
+
+---
+
+# 2. Secret for Application DB Credentials - NEWLY ADDED
+apiVersion: v1
+kind: Secret
+metadata:
+  name: spring-secret
+  namespace: devops
+type: Opaque
+data:
+  # Base64 encoded 'root' (matching MySQL default user)
+  SPRING_DATASOURCE_USERNAME: cm9vdA==
+  # Base64 encoded '12345' (matching MySQL root-password)
+  SPRING_DATASOURCE_PASSWORD: MTIzNDU=
+
+---
+
+# 3. Spring Application Deployment (Namespace and references corrected)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: student-app  # You can keep this, but labels matter more
+  name: student-app
+  namespace: devops # <-- CORRECTED: Added namespace
 spec:
-  replicas: 1  # Or 2 as in PDF
+  replicas: 1
   selector:
     matchLabels:
       app: spring-app
@@ -33,11 +65,15 @@ spec:
             secretKeyRef:
               name: spring-secret
               key: SPRING_DATASOURCE_PASSWORD
+
 ---
+
+# 4. Spring Application Service (Namespace corrected)
 apiVersion: v1
 kind: Service
 metadata:
   name: spring-service
+  namespace: devops # <-- CORRECTED: Added namespace
 spec:
   selector:
     app: spring-app
@@ -46,3 +82,4 @@ spec:
     targetPort: 8089
     nodePort: 30080
   type: NodePort
+
