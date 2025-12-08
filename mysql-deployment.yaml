@@ -1,4 +1,4 @@
-  GNU nano 7.2                                                                                                                                                                      mysql-deployment.yaml
+
 apiVersion: v1
 kind: Namespace
 metadata:
